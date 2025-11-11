@@ -13,21 +13,69 @@ public class PlayerJump : MonoBehaviour
     public float fallMultiplier = 2.5f;
     public float lowJumpMultiplier = 2f;
 
+    private float coyoteTime = 0.15f;
+    private float coyoteTimeCounter;
+
+    private float jumpBufferTime = 0.15f;
+    private float jumpBufferCounter;
+
+    public int extraJumps = 1;
+    private int extraJumpsValue;
+
+
 
     void Start()
+{
+    rb = GetComponent<Rigidbody2D>();
+    extraJumpsValue = extraJumps; // Set initial jumps
+}
+
+
+      void Update()
+{
+    isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
+
+    // --- Coyote Time & Double Jump Reset ---
+    if (isGrounded)
     {
-        rb = GetComponent<Rigidbody2D>();
+        coyoteTimeCounter = coyoteTime;
+        extraJumpsValue = extraJumps; // Reset double jumps
+    }
+    else
+    {
+        coyoteTimeCounter -= Time.deltaTime;
     }
 
-         void Update()
+    // --- Jump Buffering Logic ---
+    if (Input.GetButtonDown("Jump"))
     {
-        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
+        jumpBufferCounter = jumpBufferTime;
+    }
+    else
+    {
+        jumpBufferCounter -= Time.deltaTime;
+    }
 
-        if (Input.GetButtonDown("Jump") && isGrounded)
+    // --- COMBINED Jump Input Check ---
+    if (jumpBufferCounter > 0f)
+    {
+        if (coyoteTimeCounter > 0f) // Priority 1: Ground Jump (uses coyote time)
         {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
+            coyoteTimeCounter = 0f; // Consume coyote time
+            jumpBufferCounter = 0f; // Consume buffer
+        }
+        else if (extraJumpsValue > 0) // Priority 2: Air Jump
+        {
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce); // You could use a different jumpForce here
+            extraJumpsValue--; // Consume an air jump
+            jumpBufferCounter = 0f; // Consume buffer
         }
     }
+}
+
+
+
 
  void FixedUpdate()
     {
